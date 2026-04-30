@@ -6,7 +6,7 @@ A conversational AI chatbot that lets you chat with three Scaler/InterviewBit pe
 
 ## Live Demo
 
-> Add your deployed URL here after deployment.
+**[https://genai-engineering.vercel.app/](https://genai-engineering.vercel.app/)**
 
 ---
 
