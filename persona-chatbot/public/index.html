@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scaler Conversations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" role="navigation" aria-label="Persona selection">
+      <div class="sidebar-header">
+        <h1 class="app-title">Scaler Conversations</h1>
+        <p class="app-subtitle">Chat with Scaler's founders &amp; instructors</p>
+      </div>
+
+      <nav class="persona-list">
+        <button
+          class="persona-tab active"
+          data-persona="anshuman"
+          aria-label="Chat with Anshuman Singh"
+          aria-pressed="true"
+          type="button"
+        >
+          <div class="persona-tab-avatar" style="background: #f59e0b;">A</div>
+          <div class="persona-tab-info">
+            <span class="persona-tab-name">Anshuman Singh</span>
+            <span class="persona-tab-role">Co-founder, InterviewBit &amp; Scaler</span>
+          </div>
+        </button>
+
+        <button
+          class="persona-tab"
+          data-persona="abhimanyu"
+          aria-label="Chat with Abhimanyu Saxena"
+          aria-pressed="false"
+          type="button"
+        >
+          <div class="persona-tab-avatar" style="background: #10b981;">A</div>
+          <div class="persona-tab-info">
+            <span class="persona-tab-name">Abhimanyu Saxena</span>
+            <span class="persona-tab-role">Co-founder, InterviewBit &amp; Scaler</span>
+          </div>
+        </button>
+
+        <button
+          class="persona-tab"
+          data-persona="kshitij"
+          aria-label="Chat with Kshitij Mishra"
+          aria-pressed="false"
+          type="button"
+        >
+          <div class="persona-tab-avatar" style="background: #3b82f6;">K</div>
+          <div class="persona-tab-info">
+            <span class="persona-tab-name">Kshitij Mishra</span>
+            <span class="persona-tab-role">Lead Instructor, Scaler Academy</span>
+          </div>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="chat-area" role="main">
+
+      <!-- Chat Header -->
+      <header class="chat-header">
+        <div class="chat-header-left">
+          <div class="chat-avatar" id="chatAvatar" aria-hidden="true"></div>
+          <div class="chat-header-text">
+            <span class="chat-persona-name" id="personaName"></span>
+            <span class="chat-persona-role" id="personaRole"></span>
+          </div>
+        </div>
+        <div class="chat-header-right">
+          <span class="ai-badge">AI-Powered Chat</span>
+        </div>
+      </header>
+
+      <!-- Messages Container -->
+      <div class="messages-container" id="messages" role="log" aria-live="polite" aria-label="Conversation messages">
+        <!-- Messages and welcome state rendered here by JS -->
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="typing-container" id="typingContainer" style="display:none" aria-live="polite" aria-label="Typing indicator">
+        <div class="typing-dots" aria-hidden="true">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+        <span class="typing-label"><span id="typingName"></span> is typing…</span>
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea
+            id="messageInput"
+            class="message-input"
+            placeholder="Type your message…"
+            rows="1"
+            aria-label="Message input"
+            aria-multiline="true"
+            autocomplete="off"
+            spellcheck="true"
+          ></textarea>
+          <button
+            id="sendButton"
+            class="send-button"
+            aria-label="Send message"
+            type="button"
+          >
+            <!-- Paper plane SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+        <p class="input-hint">Press Enter to send · Shift+Enter for new line</p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- CDN: marked and DOMPurify (must be before the module) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
