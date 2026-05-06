@@ -1,18 +1,18 @@
 # Google NotebookLM RAG
 
-A miniature, self-hosted version of Google NotebookLM. Upload a PDF (or plain
-text file) and have a conversation with it. Answers are grounded in the
-document — the LLM is forced to use only the retrieved chunks, not its own
-knowledge.
+A self-hosted take on Google NotebookLM. Upload a PDF or plain-text file and
+have a conversation with it — answers are grounded in the document, with the
+LLM constrained to use only the retrieved chunks (no general-knowledge
+fallthrough).
 
-> Assignment 03 — GenAI Engineering · Scaler Semester 4 / Term 2
+Built as **Assignment 03** for the GenAI Engineering course (Scaler Sem 4).
 
-**Live demo:** _(deployed to Vercel — link goes here once deployed)_
-**Repo:** https://github.com/shivam24bcs10251-sys/GenAI-Engineering/tree/main/Google_NoteBook_RAG
+- **Live demo:** _(Vercel link — added once deployed)_
+- **Source:** [`Google_NoteBook_RAG/`](https://github.com/shivam24bcs10251-sys/GenAI-Engineering/tree/main/Google_NoteBook_RAG)
 
 ---
 
-## What it does
+## How it works
 
 ```
 PDF / TXT  ─►  Parse  ─►  Chunk  ─►  Embed  ─►  Qdrant
@@ -26,36 +26,43 @@ PDF / TXT  ─►  Parse  ─►  Chunk  ─►  Embed  ─►  Qdrant
                                           Grounded answer + sources
 ```
 
-Every upload gets its own Qdrant collection (UUID), so multiple users / docs
-never bleed into each other's search space.
+Each upload is written to its own Qdrant collection (UUID-named), so different
+documents and different users never share a search space.
+
+The chat UI shows the actual chunks retrieved for every answer — collapsed
+under each response — so a reader can verify the answer really does come from
+the document.
 
 ## Tech stack
 
-| Layer       | Choice                                                   | Why                                                                               |
-| ----------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Framework   | **Next.js 15** (App Router) + TypeScript + Tailwind      | Single deployable, API routes for the pipeline, easy Vercel deploy.               |
-| Vector DB   | **Qdrant Cloud** (free tier)                             | Required by the assignment. Cosine distance, 768-dim vectors.                     |
-| Embeddings  | **Jina AI** — `jina-embeddings-v2-base-en` (768-d)       | OpenRouter does **not** offer embeddings. Jina's free tier (1 M tokens) is the cleanest drop-in. Alternatives: HuggingFace Inference API, Google `text-embedding-004`. |
-| LLM         | **OpenRouter** — `google/gemini-2.0-flash-exp:free`      | Free, fast, capable. Swap via `OPENROUTER_MODEL` env var if rate-limited.         |
-| PDF parsing | `pdf-parse`                                              | Lightweight, gives raw text + page boundaries.                                    |
-| Chunking    | LangChain `RecursiveCharacterTextSplitter` (1000 / 200) | Hierarchical separator strategy keeps paragraphs intact.                          |
+| Layer       | Choice                                                   | Notes                                                                              |
+| ----------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Framework   | Next.js 16 (App Router) + TypeScript + Tailwind          | Single deployable; API routes host the pipeline.                                   |
+| Vector DB   | Qdrant Cloud (free tier)                                 | Cosine distance, 768-dim vectors.                                                  |
+| Embeddings  | Jina AI · `jina-embeddings-v2-base-en` (768-d)           | OpenRouter does not offer embeddings, so a separate provider is needed. Jina's free tier (1 M tokens) is the cleanest fit. Easy swaps: HuggingFace Inference API, Google `text-embedding-004`. |
+| LLM         | OpenRouter · `google/gemma-4-31b-it:free`                | Free Google instruct model. Configurable via `OPENROUTER_MODEL`.                   |
+| PDF parsing | `pdf-parse`                                              | Lightweight; gives raw text + page-break offsets.                                  |
+| Chunking    | LangChain `RecursiveCharacterTextSplitter` (1000 / 200) | Hierarchical separators keep paragraphs and sentences intact.                      |
 
-### About OpenRouter and the model choice
+### About the LLM choice (OpenRouter)
 
-OpenRouter exposes an **OpenAI-compatible chat-completions API** with dozens of
-models behind a single key. Free models that work well for this app (May 2026):
+OpenRouter exposes an OpenAI-compatible chat-completions API with dozens of
+models behind one key. Free models that work for this app (verified May 2026):
 
-- `google/gemini-2.0-flash-exp:free` ← **default**, best balance of speed + quality
+- `google/gemma-4-31b-it:free` — default
 - `meta-llama/llama-3.3-70b-instruct:free`
-- `deepseek/deepseek-chat-v3.1:free`
-- `qwen/qwen-2.5-72b-instruct:free`
+- `qwen/qwen3-next-80b-a3b-instruct:free`
+- `z-ai/glm-4.5-air:free`
+- `nvidia/nemotron-nano-9b-v2:free`
+- `nousresearch/hermes-3-llama-3.1-405b:free`
 
-If a model is rate-limited or removed from the free tier, set
-`OPENROUTER_MODEL` in `.env.local` to any other id from
-[openrouter.ai/models](https://openrouter.ai/models).
+The free tier shifts over time. If a model returns `404 No endpoints found`,
+it has been pulled — picking any other id from
+[openrouter.ai/models?max_price=0](https://openrouter.ai/models?max_price=0)
+is a one-line `.env` change.
 
-OpenRouter does **not** host embedding models, so embeddings are handled
-separately by Jina AI (free tier).
+OpenRouter does **not** host embedding models, which is why embeddings go
+through Jina AI separately.
 
 ## Chunking strategy
 
@@ -67,58 +74,12 @@ separately by Jina AI (free tier).
 
 It tries to split on paragraph breaks first, then sentences, then whitespace,
 and only falls back to mid-word splits as a last resort. The 20 % overlap
-preserves context across chunk boundaries — important for questions that
-straddle two chunks.
+preserves context across chunk boundaries — important for questions whose
+answers straddle two chunks.
 
 For PDFs the parser also records byte offsets of each page boundary, so every
-chunk is tagged with its source page number and the UI can show "page 4" next
-to a citation.
-
-## Running locally
-
-### 1. Prerequisites — three free accounts
-
-| Service       | Sign up                                                     | What you copy                |
-| ------------- | ----------------------------------------------------------- | ---------------------------- |
-| Qdrant Cloud  | https://cloud.qdrant.io (create a free 1 GB cluster)        | Cluster URL + API key        |
-| Jina AI       | https://jina.ai/?sui=apikey                                 | API key (`jina_…`)           |
-| OpenRouter    | https://openrouter.ai/keys                                  | API key (`sk-or-v1-…`)       |
-
-### 2. Install
-
-```bash
-git clone https://github.com/shivam24bcs10251-sys/GenAI-Engineering.git
-cd GenAI-Engineering/Google_NoteBook_RAG
-npm install
-```
-
-### 3. Configure
-
-```bash
-cp .env.example .env.local
-# fill in the four values
-```
-
-### 4. Run
-
-```bash
-npm run dev
-# open http://localhost:3000
-```
-
-Upload any PDF, ask questions. First request to a free OpenRouter model can
-take a few seconds while the model warms up.
-
-## Deploying to Vercel
-
-1. Push this folder to your GitHub repo (already done if you cloned it).
-2. On Vercel: **New Project → Import** the repo. Set the **Root Directory** to
-   `Google_NoteBook_RAG`.
-3. Under **Environment Variables**, add the four keys from `.env.example`.
-4. Deploy. Vercel detects Next.js automatically.
-
-> The `/api/upload` route runs on the Node.js runtime (needed by `pdf-parse`)
-> with a 60 s timeout. Hobby-tier Vercel projects support this out of the box.
+chunk is tagged with its source page number. The UI surfaces "page N" beside
+each citation.
 
 ## Project layout
 
@@ -144,13 +105,57 @@ Google_NoteBook_RAG/
 └── next.config.ts
 ```
 
-## Grounding the answer
+## Running locally
 
-The system prompt includes the retrieved chunks and the explicit instruction:
+Three free accounts cover the external services:
+
+| Service       | Sign up                                               | Value needed         |
+| ------------- | ----------------------------------------------------- | -------------------- |
+| Qdrant Cloud  | <https://cloud.qdrant.io>                             | Cluster URL + API key |
+| Jina AI       | <https://jina.ai/?sui=apikey>                         | API key (`jina_…`)   |
+| OpenRouter    | <https://openrouter.ai/keys>                          | API key (`sk-or-v1-…`) |
+
+```bash
+git clone https://github.com/shivam24bcs10251-sys/GenAI-Engineering.git
+cd GenAI-Engineering/Google_NoteBook_RAG
+npm install
+cp .env.example .env.local       # fill in the four values
+npm run dev
+# open http://localhost:3000
+```
+
+The first request to a free OpenRouter model can take a few seconds while the
+model warms up.
+
+## Deploying to Vercel
+
+1. Import the repo on Vercel.
+2. Set **Root Directory** to `Google_NoteBook_RAG`.
+3. Under **Environment Variables**, add the four keys from `.env.example`.
+4. Deploy. Next.js is detected automatically.
+
+The `/api/upload` route runs on the Node.js runtime (needed by `pdf-parse`)
+with a 60 s timeout — fine on Vercel's hobby tier.
+
+## Grounding
+
+The system prompt sent to the LLM includes the retrieved chunks plus a strict
+instruction:
 
 > Answer ONLY using the provided context below. Do not use outside knowledge.
 > If the context does not contain enough information, reply: "The document
 > doesn't cover that."
 
-The UI also shows the actual chunks the model saw (collapsed under each
-answer) so you can verify the answer is grounded.
+If retrieval returns nothing, the API short-circuits and returns that same
+fallback without ever calling the LLM. The retrieved chunks are also returned
+to the client and rendered under each answer, so groundedness is verifiable.
+
+## Submission checklist (Assignment 03)
+
+- [x] GitHub repo, public
+- [x] Full RAG pipeline: ingestion → chunking → embedding → storage → retrieval → generation
+- [x] At least one chunking strategy implemented and documented
+- [x] Vector DB (Qdrant) used for storage and retrieval
+- [x] LLM constrained to retrieved context, not general knowledge
+- [x] Handles unseen documents at upload time
+- [ ] Live deployment link _(added once Vercel deploy is up)_

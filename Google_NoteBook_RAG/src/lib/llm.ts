@@ -1,16 +1,18 @@
 /**
  * OpenRouter chat client (OpenAI-compatible API).
  *
- * Model is configurable via OPENROUTER_MODEL — defaults to a free Gemini Flash
- * model. Swap to llama-3.3-70b-instruct:free or deepseek-chat-v3.1:free if you
- * hit rate limits.
+ * Model is configurable via OPENROUTER_MODEL. Default is Google's Gemma 4
+ * (free tier). If a model is removed from the free tier or rate-limits you,
+ * swap to any other id from https://openrouter.ai/models — see README for
+ * a list of currently-working free options.
  */
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "google/gemini-2.0-flash-exp:free";
+const DEFAULT_MODEL = "google/gemma-4-31b-it:free";
 
 interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
+  
 }
 
 interface ChatResponse {
