@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { extractPdfText } from "@/lib/pdf-client";
 
 interface SourceHit {
   text: string;
@@ -24,6 +25,7 @@ interface SessionInfo {
 export default function Home() {
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,24 +36,59 @@ export default function Home() {
   async function handleUpload(file: File) {
     setUploading(true);
     setUploadError(null);
+    setUploadStatus("Reading file…");
     setMessages([]);
     setSession(null);
 
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
+      const isPdf =
+        file.type === "application/pdf" ||
+        file.name.toLowerCase().endsWith(".pdf");
+
+      let text: string;
+      let pageBreaks: number[] | undefined;
+
+      if (isPdf) {
+        setUploadStatus("Parsing PDF in your browser…");
+        const parsed = await extractPdfText(file);
+        text = parsed.text;
+        pageBreaks = parsed.pageBreaks;
+      } else {
+        text = await file.text();
+      }
+
+      if (!text.trim()) {
+        throw new Error("Could not extract any text from the file");
+      }
+
+      setUploadStatus("Indexing — chunking, embedding, writing to Qdrant…");
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, pageBreaks, filename: file.name }),
+      });
+
+      const raw = await res.text();
+      let data: { sessionId?: string; filename?: string; chunks?: number; error?: string };
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        throw new Error(
+          `Server returned a non-JSON response (${res.status}): ${raw.slice(0, 200)}`
+        );
+      }
       if (!res.ok) throw new Error(data.error || "Upload failed");
+
       setSession({
-        sessionId: data.sessionId,
-        filename: data.filename,
-        chunks: data.chunks,
+        sessionId: data.sessionId!,
+        filename: data.filename!,
+        chunks: data.chunks!,
       });
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
+      setUploadStatus(null);
     }
   }
 
@@ -100,7 +137,7 @@ export default function Home() {
         <p className="mt-1 text-sm text-neutral-400">
           Upload a PDF or .txt and chat with it. Answers come strictly from your
           document — chunked, embedded with Jina, stored in Qdrant, generated
-          via OpenRouter.
+          via the configured LLM provider.
         </p>
       </header>
 
@@ -110,6 +147,7 @@ export default function Home() {
           <p className="mb-4 text-sm text-neutral-400">
             Pick a PDF or plain-text file. The system will chunk, embed, and
             index it into a fresh Qdrant collection just for this session.
+            PDF text is extracted in your browser, so large files are fine.
           </p>
           <input
             ref={fileInputRef}
@@ -122,10 +160,8 @@ export default function Home() {
             }}
             className="block w-full cursor-pointer rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-blue-500 disabled:opacity-50"
           />
-          {uploading && (
-            <p className="mt-3 text-sm text-blue-300">
-              Indexing… chunking, embedding, and writing to Qdrant.
-            </p>
+          {uploadStatus && (
+            <p className="mt-3 text-sm text-blue-300">{uploadStatus}</p>
           )}
           {uploadError && (
             <p className="mt-3 text-sm text-red-400">{uploadError}</p>
@@ -195,7 +231,7 @@ export default function Home() {
       )}
 
       <footer className="mt-6 border-t border-neutral-900 pt-4 text-xs text-neutral-500">
-        Built with Next.js · Qdrant · Jina embeddings · OpenRouter ·{" "}
+        Built with Next.js · Qdrant · Jina embeddings · Groq / OpenRouter ·{" "}
         <a
           href="https://github.com/shivam24bcs10251-sys/GenAI-Engineering"
           target="_blank"

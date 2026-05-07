@@ -13,14 +13,13 @@
     "@langchain/textsplitters": "^0.1.0",
     "@qdrant/js-client-rest": "^1.12.0",
     "next": "^16.2.5",
-    "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^4.10.38",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
-    "@types/pdf-parse": "^1.1.4",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
     "@types/uuid": "^10.0.0",

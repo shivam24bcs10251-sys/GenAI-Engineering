@@ -1,42 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
-import { parsePdf } from "@/lib/pdf";
 import { indexDocument } from "@/lib/rag";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+interface UploadBody {
+  text?: string;
+  pageBreaks?: number[];
+  filename?: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const form = await req.formData();
-    const file = form.get("file");
+    const body = (await req.json()) as UploadBody;
+    const text = (body.text || "").trim();
+    const filename = body.filename || "document";
+    const pageBreaks = body.pageBreaks;
 
-    if (!(file instanceof File)) {
+    if (!text) {
       return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
-      );
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const name = file.name || "document";
-    const isPdf =
-      file.type === "application/pdf" || name.toLowerCase().endsWith(".pdf");
-
-    let text: string;
-    let pageBreaks: number[] | undefined;
-
-    if (isPdf) {
-      const parsed = await parsePdf(buffer);
-      text = parsed.text;
-      pageBreaks = parsed.pageBreaks;
-    } else {
-      text = buffer.toString("utf-8");
-    }
-
-    if (!text.trim()) {
-      return NextResponse.json(
-        { error: "Could not extract any text from the file" },
+        { error: "No text content provided" },
         { status: 400 }
       );
     }
@@ -46,13 +30,13 @@ export async function POST(req: NextRequest) {
     const result = await indexDocument({
       text,
       pageBreaks,
-      source: name,
+      source: filename,
       collection,
     });
 
     return NextResponse.json({
       sessionId: collection,
-      filename: name,
+      filename,
       chunks: result.chunks,
     });
   } catch (err) {
