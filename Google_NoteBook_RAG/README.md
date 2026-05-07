@@ -40,29 +40,27 @@ the document.
 | Framework   | Next.js 16 (App Router) + TypeScript + Tailwind          | Single deployable; API routes host the pipeline.                                   |
 | Vector DB   | Qdrant Cloud (free tier)                                 | Cosine distance, 768-dim vectors.                                                  |
 | Embeddings  | Jina AI · `jina-embeddings-v2-base-en` (768-d)           | OpenRouter does not offer embeddings, so a separate provider is needed. Jina's free tier (1 M tokens) is the cleanest fit. Easy swaps: HuggingFace Inference API, Google `text-embedding-004`. |
-| LLM         | OpenRouter · `google/gemma-4-31b-it:free`                | Free Google instruct model. Configurable via `OPENROUTER_MODEL`.                   |
+| LLM         | **Groq** · `llama-3.3-70b-versatile` (default) — or **OpenRouter** | Provider toggled by `LLM_PROVIDER`. Groq's free tier has its own quota pool, so it doesn't share OpenRouter's noisy free-tier rate limits. |
 | PDF parsing | `pdf-parse`                                              | Lightweight; gives raw text + page-break offsets.                                  |
 | Chunking    | LangChain `RecursiveCharacterTextSplitter` (1000 / 200) | Hierarchical separators keep paragraphs and sentences intact.                      |
 
-### About the LLM choice (OpenRouter)
+### About the LLM choice
 
-OpenRouter exposes an OpenAI-compatible chat-completions API with dozens of
-models behind one key. Free models that work for this app (verified May 2026):
+The app supports two OpenAI-compatible providers, picked via `LLM_PROVIDER`:
 
-- `google/gemma-4-31b-it:free` — default
-- `meta-llama/llama-3.3-70b-instruct:free`
-- `qwen/qwen3-next-80b-a3b-instruct:free`
-- `z-ai/glm-4.5-air:free`
-- `nvidia/nemotron-nano-9b-v2:free`
-- `nousresearch/hermes-3-llama-3.1-405b:free`
+- **`groq`** (default) — free, very fast inference, separate quota from
+  OpenRouter. Default model: `llama-3.3-70b-versatile`. Other free Groq models:
+  `llama-3.1-8b-instant`, `qwen/qwen3-32b`, `gemma2-9b-it`. Get a key at
+  [console.groq.com/keys](https://console.groq.com/keys).
+- **`openrouter`** — many free models behind one key, but the free tier is
+  heavily shared and frequently returns 429s. Currently working free models
+  (verified May 2026): `meta-llama/llama-3.3-70b-instruct:free`,
+  `qwen/qwen3-next-80b-a3b-instruct:free`, `z-ai/glm-4.5-air:free`,
+  `nvidia/nemotron-nano-9b-v2:free`. Full list:
+  [openrouter.ai/models?max_price=0](https://openrouter.ai/models?max_price=0).
 
-The free tier shifts over time. If a model returns `404 No endpoints found`,
-it has been pulled — picking any other id from
-[openrouter.ai/models?max_price=0](https://openrouter.ai/models?max_price=0)
-is a one-line `.env` change.
-
-OpenRouter does **not** host embedding models, which is why embeddings go
-through Jina AI separately.
+Embeddings go through Jina AI separately because neither Groq nor OpenRouter
+host embedding models.
 
 ## Chunking strategy
 
@@ -109,11 +107,12 @@ Google_NoteBook_RAG/
 
 Three free accounts cover the external services:
 
-| Service       | Sign up                                               | Value needed         |
-| ------------- | ----------------------------------------------------- | -------------------- |
-| Qdrant Cloud  | <https://cloud.qdrant.io>                             | Cluster URL + API key |
-| Jina AI       | <https://jina.ai/?sui=apikey>                         | API key (`jina_…`)   |
-| OpenRouter    | <https://openrouter.ai/keys>                          | API key (`sk-or-v1-…`) |
+| Service       | Sign up                                               | Value needed              |
+| ------------- | ----------------------------------------------------- | ------------------------- |
+| Qdrant Cloud  | <https://cloud.qdrant.io>                             | Cluster URL + API key     |
+| Jina AI       | <https://jina.ai/?sui=apikey>                         | API key (`jina_…`)        |
+| Groq          | <https://console.groq.com/keys>                       | API key (`gsk_…`) — default LLM |
+| OpenRouter    | <https://openrouter.ai/keys>                          | API key (only if `LLM_PROVIDER=openrouter`) |
 
 ```bash
 git clone https://github.com/shivam24bcs10251-sys/GenAI-Engineering.git
